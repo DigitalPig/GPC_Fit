@@ -14,6 +14,10 @@ $RECYCLE.BIN/
 *.msm
 *.msp
 
+# Data file
+*.arw
+*.csv
+
 # Windows shortcuts
 *.lnk
 
