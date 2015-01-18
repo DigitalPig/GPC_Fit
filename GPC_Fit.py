@@ -11,7 +11,7 @@ bl_start = 1.
 bl_end = 15. # Stand and End point for baseline correction
 start = 17. # user-input term for the start of peak recognization
 end = 33.   # user-input term for the end of peak recognization
-amp_threshold = 20 # Peak threshold to identify as peak
+amp_threshold = 5 # Peak threshold to identify as peak
 # Function definition
 
 def add_peak_info(p_loc, p_amp, p_num):
@@ -48,6 +48,25 @@ def calibration(time):
     res = a + b * time + c * time**2 + d * time**3
     return res
 
+def print_peak_info(peaks, num):
+    '''
+    This function is to pretify the peak information print out function
+    Currently it is only used for terminal based function.
+    The newer GUI interface would need a better layout
+    Usage:
+    print_peak_info(peaks, num)
+    while peaks is the list of peaks. Each peak is a
+    dictionary with peakM, Mn, Mw, PDI as keys
+    '''
+    for i in range(1,num):
+        name = 'g' + str(i) + '_'
+        print('Here is the information of Peak {0!s}'.format(i))
+        print('Peak area is {0:.2f}'.format(peaks[i-1][name+'amplitude']))
+        print('Peak Mn is {0:,.0f}'.format(peaks[i-1][name+'Mn']))
+        print('Peak Mw is {0:,.0f}'.format(peaks[i-1][name+'Mw']))
+        print('Peak Mp is {0:,.0f}'.format(peaks[i-1][name+'peakM']))
+        print('Peak PDI is {0:.2f}'.format(peaks[i-1][name+'PDI']))
+        print('{0:-<15}'.format('-'))
 
 # os.chdir('C:\\Users\\zhil\\Documents\\ZQ_Programs\\Coding')
 if (sys.platform != 'linux'):
@@ -110,62 +129,59 @@ for i in range(len(peak_location)):
 # TODO: Here the A parameter considering the std. Manually input now but need 
 # to be changed.
 
+
+# Here we want to have the program to build the model by peak information.
+
+# First, We will always have Peak 1. Also, need to do some initiation for peak
+# 1.
+
+gauss1  = GaussianModel(prefix='g1_')
+pars = gauss1.make_params()
+
 for i in range(1, num):
     name = 'g' + str(i) + '_'
+    model = 'gauss' + str(i)
     x2 = peaks[i-1][name+'center']
     sigma = float(input("The sigma of peak {0} is".format(name)))
     y2 = peaks[i-1][name+'amplitude']/(sigma*np.sqrt(2*np.pi))
     plt.plot((x2,x2),(0,y2*sigma*np.sqrt(2*np.pi)),'-')
+    if i == 1:
+        pars[name+'center'].set(peaks[i-1][name+'center'])
+        pars[name+'sigma'].set(sigma)
+        pars[name+'amplitude'].set(peaks[i-1][name+'amplitude'])
+        mod = gauss1
+    else:
+        model = GaussianModel(prefix=name)
+        pars.update(model.make_params())
+        pars[name+'center'].set(peaks[i-1][name+'center'])
+        pars[name+'sigma'].set(sigma)
+        pars[name+'amplitude'].set(peaks[i-1][name+'amplitude'])
+        mod = mod + model
 
 plt.plot(x[x_start:x_end],y[x_start:x_end])
 plt.show()
 print(peaks) 
    
-
-
-gauss1  = GaussianModel(prefix='g1_')
-pars = gauss1.make_params()
-
-pars['g1_center'].set(24, min=22, max=26)
-pars['g1_sigma'].set(3, min=1)
-pars['g1_amplitude'].set(82, min=10)
-
-gauss2  = GaussianModel(prefix='g2_')
-
-pars.update(gauss2.make_params())
-
-pars['g2_center'].set(26, min=24, max=28)
-pars['g2_sigma'].set(3, min=1)
-pars['g2_amplitude'].set(60, min=20)
-
-gauss3  = GaussianModel(prefix='g3_')
-
-pars.update(gauss3.make_params())
-pars['g3_center'].set(27, min=25, max=29)
-pars['g3_sigma'].set(0.5, min=0.1)
-pars['g3_amplitude'].set(40, min=20)
-mod = gauss1 + gauss2 + gauss3
 out = mod.fit(y[x_start:x_end], pars, x=x[x_start:x_end])
 print(out.fit_report(min_correl=0.5))
 
 #comps = out.eval_components(x=x[x_start:x_end])
 fitted_val = out.best_values
-yp1 = gaussian(x[x_start:x_end],fitted_val['g1_amplitude'],fitted_val['g1_center'],fitted_val['g1_sigma'])
-yp2 = gaussian(x[x_start:x_end],fitted_val['g2_amplitude'],fitted_val['g2_center'],fitted_val['g2_sigma'])
-yp3 = gaussian(x[x_start:x_end],fitted_val['g3_amplitude'],fitted_val['g3_center'],fitted_val['g3_sigma'])
-
-
 
 plt.plot(x[x_start:x_end],y[x_start:x_end])
 plt.plot(x[x_start:x_end], out.best_fit, 'r-')
-plt.plot(x[x_start:x_end],yp1,'--',x[x_start:x_end],yp2,'--',x[x_start:x_end],yp3,'--')
+for i in range(1,num):
+    name = 'g' + str(i) + '_'
+    yp = gaussian(x[x_start:x_end],fitted_val[name+'amplitude'],fitted_val[name+'center'],fitted_val[name+'sigma'])
+    plt.plot(x[x_start:x_end],yp,'--')
+
 plt.show()
 
 for i in range(1, num):
     name = 'g' + str(i) + '_'
     peaks[i-1][name+'center'] = fitted_val[name+'center']
     peaks[i-1][name+'area'] = fitted_val[name+'amplitude']
-    peaks[i-1][name+'peakM'] = calibration(fitted_val[name+'center'])
+    peaks[i-1][name+'peakM'] = 10**(calibration(fitted_val[name+'center']))
     M_sigma = (calibration((peaks[i-1][name+'center']+fitted_val[name+'sigma']))
             - calibration((peaks[i-1][name+'center']-fitted_val[name+'sigma'])))
     M_sigma /= 2
@@ -174,7 +190,7 @@ for i in range(1, num):
     peaks[i-1][name+'Mw'] = peaks[i-1][name+'peakM']*np.exp(+(M_sigma**2)/2)
     peaks[i-1][name+'PDI'] = np.exp(+(M_sigma**2))
     
-print(peaks)    
+print_peak_info(peaks,num)
 
 
 
