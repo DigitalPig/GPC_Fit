@@ -6,11 +6,11 @@ from scipy import stats
 from lmfit.models import GaussianModel
 
 # This is the place where global variable is defined:
-infile = 'ZHIL1669.arw' # Input file name for Empower Raw data
+infile = 'ZHIL1958.arw' # Input file name for Empower Raw data
 bl_start = 1.
 bl_end = 15. # Stand and End point for baseline correction
-start = 17. # user-input term for the start of peak recognization
-end = 33.   # user-input term for the end of peak recognization
+start = 18. # user-input term for the start of peak recognization
+end = 31.   # user-input term for the end of peak recognization
 amp_threshold = 5 # Peak threshold to identify as peak
 # Function definition
 
@@ -41,10 +41,10 @@ def calibration(time):
     Usage:
     Mp_Log = calibration(time)
     '''
-    a = 2.27E1
-    b = -1.77E0
-    c = 6.21E-2
-    d = -8.15E-4
+    a = 2.25E1
+    b = -1.74E0
+    c = 6.07E-2
+    d = -7.96E-4
     res = a + b * time + c * time**2 + d * time**3
     return res
 
@@ -61,7 +61,7 @@ def print_peak_info(peaks, num):
     for i in range(1,num):
         name = 'g' + str(i) + '_'
         print('Here is the information of Peak {0!s}'.format(i))
-        print('Peak area is {0:.2f}'.format(peaks[i-1][name+'amplitude']))
+        print('Peak area is {0:.2f}'.format(peaks[i-1][name+'area']))
         print('Peak Mn is {0:,.0f}'.format(peaks[i-1][name+'Mn']))
         print('Peak Mw is {0:,.0f}'.format(peaks[i-1][name+'Mw']))
         print('Peak Mp is {0:,.0f}'.format(peaks[i-1][name+'peakM']))
@@ -182,8 +182,8 @@ for i in range(1, num):
     peaks[i-1][name+'center'] = fitted_val[name+'center']
     peaks[i-1][name+'area'] = fitted_val[name+'amplitude']
     peaks[i-1][name+'peakM'] = 10**(calibration(fitted_val[name+'center']))
-    M_sigma = (calibration((peaks[i-1][name+'center']+fitted_val[name+'sigma']))
-            - calibration((peaks[i-1][name+'center']-fitted_val[name+'sigma'])))
+    M_sigma = (calibration((peaks[i-1][name+'center']-fitted_val[name+'sigma']))
+            - calibration((peaks[i-1][name+'center']+fitted_val[name+'sigma'])))
     M_sigma /= 2
     print(M_sigma)
     peaks[i-1][name+'Mn'] = peaks[i-1][name+'peakM']*np.exp(-(M_sigma**2)/2)
