@@ -23,7 +23,7 @@ def add_peak_info(p_loc, p_amp, p_num):
     peak_name = 'g' + str(p_num) + '_'
     peak_location = peak_name + 'center'
     peak_amp = peak_name + 'amplitude'
-    peak = dict(zip([peak_name,peak_location,peak_amp],[p_num,p_loc,p_amp]))
+    peak = dict(zip([peak_name,peak_location,peak_amp], [p_num,p_loc,p_amp]))
     return peak
 def gaussian (x,A,mu,sigma):
     '''
